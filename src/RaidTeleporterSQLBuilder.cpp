@@ -249,7 +249,7 @@ int main() {
 	int GossipMenuStart = 45000;
 	int ObjectIndexStart = 902000;
 	int GuidStart = 6000000;
-	bool testing = true;
+	bool testing = false;
 	if (!testing) {
 		ProduceNecesaryValues(GossipIndexStart, GossipMenuStart, ObjectIndexStart, GuidStart);
 	}
