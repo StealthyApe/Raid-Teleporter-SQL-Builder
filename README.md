@@ -7,5 +7,5 @@ Simply do a filter such as `MenuID >= 25000` to check if the range above is clea
 The Tables to check are `gossip_menu_option` , `broadcast_text` , `gameobject` , `gameobject_template`
 
 # Credits
-Created by Covertmonkey for any support join my discord at https://discord.gg/hhWynYMPT6
+Created by Covertmonkey for any support join my [discord](https://discord.gg/zHTqRY4EAQ "Covertmonkey's Modules") 
 
