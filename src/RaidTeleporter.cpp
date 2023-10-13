@@ -22,12 +22,35 @@ struct coord {
 	float o = 0;
 	mode mode = normalOnly;
 };
+struct broadcastTranslate {
+	string teleportMesage = "";
+	int index = 0;
+};
+struct gossipTranslate {
+	string message = "";
+	int menuId = 0;
+	int optionid = 0;
+};
+vector<string> locales{
+	"'deDE'",
+	"'esES'",
+	"'esMX'",
+	"'frFR'",
+	"'koKR'",
+	"'ruRU'",
+	"'zhCN'",
+	"'zhTW'"
+};
 
-void RaidTeleporterBroadcast(ofstream& output, vector<string>bossNames, int GossipIndexStart) {
+vector<broadcastTranslate> RaidTeleporterBroadcast(ofstream& output, vector<string>bossNames, int GossipIndexStart) {
 	int boss = 0;
 	output << "REPLACE INTO `broadcast_text` (`ID`, `LanguageID`, `MaleText`, `FemaleText`, `EmoteID1`, `EmoteID2`, `EmoteID3`, `EmoteDelay1`, `EmoteDelay2`, `EmoteDelay3`, `SoundEntriesId`, `EmotesID`, `Flags`, `VerifiedBuild`) VALUES";
 	output << '\n';
+	vector<broadcastTranslate> forLocale;
 	for (int i = GossipIndexStart; i < bossNames.size() + GossipIndexStart; i++) {
+		broadcastTranslate temp = broadcastTranslate();
+		temp.index = i;
+		temp.teleportMesage = "'Teleport to " + bossNames[boss] + "'";
 		output << '(' << i << ", 7, 'Teleport to " << bossNames[boss] << "', '', 0, 0, 0, 0, 0, 0, 0, 0, 1, 1)";
 		if (i != bossNames.size() + GossipIndexStart - 1) {
 			output << ",\n";
@@ -36,8 +59,21 @@ void RaidTeleporterBroadcast(ofstream& output, vector<string>bossNames, int Goss
 			output << ";\n";
 		}
 		boss++;
+		forLocale.push_back(temp);
 	}
+	return forLocale;
 }
+void translateBroadcasts(vector<broadcastTranslate> list, ofstream& output) {
+	
+	for (int i = 0; i < list.size(); i++) {
+		for (int i2 = 0; i2 < locales.size(); i2++) {
+			output << "REPLACE INTO `broadcast_text_locale` (`ID`, `locale`, `MaleText`, `FemaleText`, `VerifiedBuild`) VALUES\n";
+			output << "(" << list[i].index << ", " << locales[i2] << ", " << list[i].teleportMesage << ", '', 1);\n";
+		}
+	}
+
+}
+
 vector<string> BossNameList(ifstream& input, vector<int>& RaidSize) {
 	string is;
 	vector<string> bosses;
@@ -60,16 +96,30 @@ vector<string> BossNameList(ifstream& input, vector<int>& RaidSize) {
 	return bosses;
 }
 
-void GossipMenuOptions(ofstream& output, vector<string>bossNames, vector<int> bossNumber, int gossipMenuStart, int GossipIndexStart) {
-	
+vector<gossipTranslate> GossipMenuOptions(ofstream& output, vector<string>bossNames, vector<int> bossNumber, int gossipMenuStart, int GossipIndexStart) {
+	vector<gossipTranslate> trans;
 	int bosslist = 0;
 	int GossipIndex = GossipIndexStart;
 	for (int i = gossipMenuStart; i < bossNumber.size() + gossipMenuStart; i++) {
 		for (int i2 = 0; i2 < bossNumber[i - gossipMenuStart]; i2++) {
+			gossipTranslate temp = gossipTranslate();
+			temp.menuId = i;
+			temp.optionid = i2;
+			temp.message = "'Teleport to " + bossNames[bosslist] + "'";
 			output << "REPLACE INTO `gossip_menu_option` (`MenuID`, `OptionID`, `OptionIcon`, `OptionText`, `OptionBroadcastTextID`, `OptionType`, `OptionNpcFlag`, `ActionMenuID`, `ActionPoiID`, `BoxCoded`, `BoxMoney`, `BoxText`, `BoxBroadcastTextID`, `VerifiedBuild`) VALUES ";
 			output << "(" << i << ", "<< i2 <<", 0, 'Teleport to " << bossNames[bosslist] << "', " << GossipIndex << ", 1, 1, 0, 0, 0, 0, '', 0, 1);\n";
 			bosslist++;
 			GossipIndex++;
+			trans.push_back(temp);
+		}
+	}
+	return trans;
+}
+void translateGossip(vector<gossipTranslate> list, ofstream& output) {
+	for (int i = 0; i < list.size(); i++) {
+		for (int i2 = 0; i2 < locales.size(); i2++) {
+			output << "REPLACE INTO `gossip_menu_option_locale` (`MenuID`, `OptionID`, `Locale`, `OptionText`, `BoxText`) VALUES\n";
+			output << "(" << list[i].menuId << ", " << list[i].optionid << ", " << locales[i2] << ", " << list[i].message << ", '');\n";
 		}
 	}
 }
@@ -258,7 +308,7 @@ int main() {
 	int GossipMenuStart = 45000;
 	int ObjectIndexStart = 902000;
 	int GuidStart = 6000000;
-	bool testing = false;
+	bool testing = true;
 	if (!testing) {
 		ProduceNecesaryValues(GossipIndexStart, GossipMenuStart, ObjectIndexStart, GuidStart);
 	}
@@ -267,10 +317,16 @@ int main() {
 	vector<string> bossNames = BossNameList(bosses, bossTotal);
 	bosses.close();
 	output.open("broadcast.sql");
-	RaidTeleporterBroadcast(output, bossNames, GossipIndexStart);
+	vector<broadcastTranslate> trans = RaidTeleporterBroadcast(output, bossNames, GossipIndexStart);
+	output.close();
+	output.open("broadcast_text_locale.sql");
+	translateBroadcasts(trans, output);
 	output.close();
 	output.open("gossipmenuoptions.sql");
-	GossipMenuOptions(output, bossNames, bossTotal, GossipMenuStart, GossipIndexStart);
+	vector<gossipTranslate> tranGos = GossipMenuOptions(output, bossNames, bossTotal, GossipMenuStart, GossipIndexStart);
+	output.close();
+	output.open("gossip_menu_option_locale.sql");
+	translateGossip(tranGos, output);
 	output.close();
 	vector<string> instanceList = GetInstanceNames(instanceNames);
 	output.open("gobjecttemplate.sql");
