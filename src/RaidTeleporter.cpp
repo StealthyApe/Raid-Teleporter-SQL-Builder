@@ -7,11 +7,10 @@
 using namespace std;
 
 enum mode {
-	normalOnly = 0,
-	pre32_heroic_25man_norm = 1,
-
-
-
+	normalOnly = 1,
+	pre32_heroic_25man_norm_and_norm = 3,
+	tenman_and_norm = 5,
+	everythingBarMythic = 15,
 };
 
 struct coord {
@@ -161,6 +160,7 @@ vector<coord*> GetCoordList(ifstream& is) {
 	coord* line = new coord;
 	vector<coord*> coordlist;
 	bool ID = false;
+	mode currentMode = normalOnly;
 	while (getline(is, input)) {
 		ss << input;
 		while (!ss.eof()) {
@@ -169,6 +169,9 @@ vector<coord*> GetCoordList(ifstream& is) {
 			string temp;
 			ss >> temp; // discards {
 			if (temp[0] == '/') {
+				ss >> temp;
+				int newMode = stoi(temp);
+				currentMode = static_cast<mode>(newMode);
 				ID = true;
 				break;
 			}
@@ -190,6 +193,7 @@ vector<coord*> GetCoordList(ifstream& is) {
 		}
 		ss.clear();
 		if (!ID) {
+			line->mode = currentMode;
 			coordlist.push_back(line);
 		}
 		input.clear();
@@ -210,7 +214,7 @@ void GameObject(ofstream& output, vector<coord*> coordinateList, int ObjectStart
 			storedMap = coordinateList[i]->map;
 		}
 		output << "(" << GuidStart << ", " << ObjectStart << ", " << coordinateList[i]->map
-			<< ", 0, 0, 15, 1, " << coordinateList[i]->x << ", " << coordinateList[i]->y << ", "
+			<< ", 0, 0, " <<coordinateList[i]->mode << ", 1, " << coordinateList[i]->x << ", " << coordinateList[i]->y << ", "
 			<< coordinateList[i]->z << ", " << coordinateList[i]->o << ", 0, 0, -0.819342, -0.573306, 300, 0, 1, '', NULL)";
 		if (i == coordinateList.size() - 1) {
 			output << ';';
